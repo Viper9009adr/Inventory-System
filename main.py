@@ -72,21 +72,21 @@ class InventoryManager:
 
         return "\n".join(output)
     
-    def print_help():
-        print("\n--- Available Commands ---")
-        print("add:     Add a new item(requires ID, Name, Qty, Price).")
-        print("remove:  Remove an item by ID.")
-        print("view:    Display all item in inventory.")
-        print("exit:    Quit the program.")
-        print("-"*28)
+def print_help():
+    print("\n--- Available Commands ---")
+    print("add:     Add a new item(requires ID, Name, Qty, Price).")
+    print("remove:  Remove an item by ID.")
+    print("view:    Display all item in inventory.")
+    print("exit:    Quit the program.")
+    print("-"*28)
 
-    def run_cli():
+def run_cli():
 
-        manager = InventoryManager()
+    manager = InventoryManager()
 
-        print_help()
+    print_help()
 
-        while True:
+    while True:
             try:
                 command = input("Enter command or 'help': ").lower().strip()
 
