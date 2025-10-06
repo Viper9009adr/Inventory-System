@@ -12,8 +12,7 @@ class InventoryItem:
     def __str__(self):
         """Defines how the object prints to the console"""
         return(
-            f"ID: {self.item_id:<10} | Name: {self.name:<25} | "
-            f"Qty: {self.quantity:<5} | Price: ${self.price:.2f}"
+            f"| ID: {self.item_id:<10}| Name: {self.name:<25}| Qty: {self.quantity:<5}| Price: ${self.price:.2f}"
         )
 
 class InventoryManager:
@@ -34,15 +33,16 @@ class InventoryManager:
 # new_item = InventoryItem("AX-001", "Axe Head", 5, 45.00)
 # manager.inventory_storage[new_item.item_id] = new_item
 # print(manager.inventory_storage["AX-001"])
-
+ 
 
     def add_item(self, item_id: str, name: str, quantity: int, price: float):
-        if item_id in self.inventory_storage:
-            return f"{name} Already in Inventory"
-        else:
             item = InventoryItem(item_id, name, quantity, price)
             self.inventory_storage[item_id] = item
             return f"{name} added correctly"
+        
+    def check_item(self, item_id):
+        if item_id in self.inventory_storage:
+            return True
 
 
     def remove_item(self, item_id: str,):
@@ -59,16 +59,16 @@ class InventoryManager:
         
 
         output = [
-            "\n" + "="*66,
-            f"| {"ID":<10} | {"Name":<25} | {"Quantity":<8} | {"Price":<10} |",
-            "-"*66
+            "\n" + "="*80,
+            f"| {"ID":<10}    | {"Name":<25}      | {"Quantity":<8}  | {"Price":<10} ",
+            "-"*80
         ]
   
 
         for item in self.inventory_storage.values():
             output.append(str(item))
 
-        output.append("="*66 + "\n")
+        output.append("="*80 + "\n")
 
         return "\n".join(output)
     
@@ -93,6 +93,9 @@ def run_cli():
                 if command == "exit":
                     print("Exciting Inventory System, Have a Nice Day!")
                     break
+
+                #elif command == "perra":     
+                    #print("Tu vieja, puto!")
                 
                 elif command == "help":
                     print_help()
@@ -107,6 +110,11 @@ def run_cli():
                 elif command == "add":
                     try:
                         item_id = input("Enter ID: ").strip()
+                        if manager.check_item(item_id) == True:
+                            print(f"{item_id} Already in Inventory")
+                            continue
+
+                        
                         name = input("Enter Name: ").strip()
                         quantity = int(input("Enter Quantity: "))
                         price = float(input("Enter Price: "))
