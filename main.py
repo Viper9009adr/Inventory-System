@@ -47,27 +47,94 @@ class InventoryManager:
 
     def remove_item(self, item_id: str,):
         if item_id in self.inventory_storage:
-            item_to_remove = self.inventory_storage[item_id]
-            item_name = item_to_remove.name
-            self.inventory_storage.pop(item_id)
-            return f"{item_name} removed successfully"
+            item_name = self.inventory_storage.pop(item_id)
+            return f"{item_name.name} removed successfully"
         else:
             return f"{item_id} doesn't exist"
         
 
+    def view_inventory(self):
+        if not self.inventory_storage:
+            return "Inventory is empty"
+        
+
+        output = [
+            "\n" + "="*66,
+            f"| {"ID":<10} | {"Name":<25} | {"Quantity":<8} | {"Price":<10} |",
+            "-"*66
+        ]
+  
+
+        for item in self.inventory_storage.values():
+            output.append(str(item))
+
+        output.append("="*66 + "\n")
+
+        return "\n".join(output)
+    
+    def print_help():
+        print("\n--- Available Commands ---")
+        print("add:     Add a new item(requires ID, Name, Qty, Price).")
+        print("remove:  Remove an item by ID.")
+        print("view:    Display all item in inventory.")
+        print("exit:    Quit the program.")
+        print("-"*28)
+
+    def run_cli():
+
+        manager = InventoryManager()
+
+        print_help()
+
+        while True:
+            try:
+                command = input("Enter command or 'help': ").lower().strip()
+
+                if command == "exit":
+                    print("Exciting Inventory System, Have a Nice Day!")
+                    break
+                
+                elif command == "help":
+                    print_help()
+
+                elif command == "view":
+                    print(manager.view_inventory())
+                
+                elif command == "remove":
+                    item_id = input("Enter ID of imtem to remove: ").strip()
+                    print(manager.remove_item(item_id))
+
+                elif command == "add":
+                    try:
+                        item_id = input("Enter ID: ").strip()
+                        name = input("Enter Name: ").strip()
+                        quantity = int(input("Enter Quantity: "))
+                        price = float(input("Enter Price: "))
+
+                        if quantity < 0 or price < 0:
+                            print("ERROR: Quantity and Price cannot be negative")
+                            continue
+
+                        print(manager.add_item(item_id, name, quantity, price))
+                    except ValueError:
+                        print("Error: Quantity must be a whole number and Price must be a decimal number.")
+                    except Exception as e:
+                        print(f"An error occurred during addition: {e}")
+
+                else:
+                    print(f"Unknown command: '{command}'. Type 'help' for options.")
+
+            except EOFError:
+                print("\nExiting Inventory System, Have a Nice Day!")
+                break
+
+            except Exception as e:
+                print(f"An error occurred during addition: {e}")
 
 
-manager = InventoryManager()
+if __name__ == "__main__":
+    run_cli()
 
-# Add items
-print(manager.add_item("S-101", "Small Screwdriver", 50, 4.99))
-print(manager.add_item("H-500", "Hammer, 20oz Steel", 15, 18.50))
+                
 
-# Try to add a duplicate (should fail)
-print(manager.add_item("S-101", "Duplicate Screwdriver", 5, 1.00)) 
 
-# Remove an existing item
-print(manager.remove_item("H-500"))
-
-# Try to remove a non-existent item (should fail)
-print(manager.remove_item("X-999"))
