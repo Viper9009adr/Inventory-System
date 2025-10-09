@@ -1,8 +1,14 @@
+import json
+import os
+from typing import Dict, List, Any
+
+
+
 class InventoryItem:
     """
     Blueprint for a single item (the data structure)
     """
-    def __init__(self, item_id: str, name: str, quantity: int, price: float):
+    def __init__(self, item_id: int, name: str, quantity: int, price: float):
         #Attributes prefixed with self. are instance variables
         self.item_id = item_id
         self.name = name
@@ -14,6 +20,14 @@ class InventoryItem:
         return(
             f"| ID: {self.item_id:<10}| Name: {self.name:<25}| Qty: {self.quantity:<5}| Price: ${self.price:.2f}"
         )
+    
+    def to_dict(self) -> Dict:
+        return {
+            "item_id": self.item_id,
+            "name": self.name,
+            "quantity": self.quantity,
+            "price": self.price
+        }
 
 class InventoryManager:
     """
@@ -24,8 +38,9 @@ class InventoryManager:
         # This is the single, central dictionary that holds all inventory items
         # Key : item_id(str)
         # Value : InventoryItem object
-        self.inventory_storage = {}
-        print("Inventory Manager Initialized.")
+        self.inventory_storage: Dict[int, InventoryItem] = {}
+        self._next_id = 1
+        
 
 
 # --- Example Usage (How we will test the class later) ---
@@ -35,19 +50,19 @@ class InventoryManager:
 # print(manager.inventory_storage["AX-001"])
  
 
-    def add_item(self, item_id: str, name: str, quantity: int, price: float):
-            item = InventoryItem(item_id, name, quantity, price)
-            self.inventory_storage[item_id] = item
+    def add_item(self, item_id: int, name: str, quantity: int, price: float):
+            item = InventoryItem(self._next_id, name, quantity, price)
+            self.inventory_storage[self._next_id] = item
+            self._next_id += 1
             return f"{name} added correctly"
         
-    def check_item(self, item_id):
-        if item_id in self.inventory_storage:
-            return True
+    def check_item(self, item_id: int) -> bool:
+        return self._next_id in self.inventory_storage
 
 
-    def remove_item(self, item_id: str,):
-        if item_id in self.inventory_storage:
-            item_name = self.inventory_storage.pop(item_id)
+    def remove_item(self, item_id: int,):
+        if item_id == self.inventory_storage[self._next_id]:
+            item_name = self.inventory_storage.pop(self._next_id)
             return f"{item_name.name} removed successfully"
         else:
             return f"{item_id} doesn't exist"
@@ -72,6 +87,55 @@ class InventoryManager:
 
         return "\n".join(output)
     
+
+    def save_inventory(self, filepath: str = 'inventory_data.json'):
+        inventory_data = []
+        for item in self.inventory_storage.values():
+            inventory_data.append(item.to_dict())
+
+        try:
+            with open(filepath, "w") as f:
+                json.dump(inventory_data, f, indent=4)
+            print(f"Inventory saved succesfully to {filepath}.")
+        except IOError as e:
+            print(f"Error saving inventory: {e}")
+
+    def load_inventory(self, filepath: str = "inventory_data.json"):
+        if not os.path.exists(filepath):
+            print(f"No previous inventory file found. Starting fresh.")
+            return
+        
+        try:
+            with open(filepath, "r") as f:
+                data: List[Dict[int, Any]] = json.load(f)
+
+            if not data:
+                print("Inventory is empty.")
+                return
+            
+            max_id = 0
+            for item_dict in data:
+                item_id_int = int(item_dict['item_id'])
+
+                item = InventoryItem(
+                    item_id=item_id_int,
+                    name=item_dict['name'],
+                    quantity=item_dict['quantity'],
+                    price=item_dict['price']
+                )
+                self.inventory_storage[item_id_int] = item
+                if item_id_int > max_id:
+                    max_id = item_id_int
+
+            self._next_id = max_id + 1
+            print(f"Inventory loaded successfully from {filepath}. Next ID is {self._next_id}.")
+
+        except (IOError, json.JSONDecodeError) as e:
+            print(f"Error loading inventory from {filepath}: {e}")
+
+
+
+    
 def print_help():
     print("\n--- Available Commands ---")
     print("add:     Add a new item(requires ID, Name, Qty, Price).")
@@ -84,6 +148,8 @@ def run_cli():
 
     manager = InventoryManager()
 
+    manager.load_inventory()
+
     print_help()
 
     while True:
@@ -91,6 +157,7 @@ def run_cli():
                 command = input("Enter command or 'help': ").lower().strip()
 
                 if command == "exit":
+                    manager.save_inventory()
                     print("Exciting Inventory System, Have a Nice Day!")
                     break
 
@@ -104,14 +171,14 @@ def run_cli():
                     print(manager.view_inventory())
                 
                 elif command == "remove":
-                    item_id = input("Enter ID of imtem to remove: ").strip()
+                    item_id = input("Enter ID of item to remove: ").strip()
                     print(manager.remove_item(item_id))
 
                 elif command == "add":
                     try:
                         item_id = input("Enter ID: ").strip()
-                        if manager.check_item(item_id) == True:
-                            print(f"{item_id} Already in Inventory")
+                        if manager.check_item(item_id):
+                            print(f"Error: Item ID '{item_id}' already exists. Please choose a different ID.")
                             continue
 
                         
