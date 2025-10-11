@@ -54,18 +54,18 @@ class InventoryManager:
             item = InventoryItem(self._next_id, name, quantity, price)
             self.inventory_storage[self._next_id] = item
             self._next_id += 1
-            return f"{name} added correctly"
+            return f"{name} added correctly with ID {self._next_id - 1}"
         
     def check_item(self, item_id: int) -> bool:
-        return self._next_id in self.inventory_storage
+        return item_id in self.inventory_storage
 
 
-    def remove_item(self, item_id: int,):
-        if item_id == self.inventory_storage[self._next_id]:
-            item_name = self.inventory_storage.pop(self._next_id)
+    def remove_item(self, item_id: int):
+        if item_id in self.inventory_storage:
+            item_name = self.inventory_storage.pop(item_id)
             return f"{item_name.name} removed successfully"
         else:
-            return f"{item_id} doesn't exist"
+            return f"Item with ID {item_id} doesn't exist"
         
 
     def view_inventory(self):
@@ -127,8 +127,9 @@ class InventoryManager:
                 if item_id_int > max_id:
                     max_id = item_id_int
 
+             
             self._next_id = max_id + 1
-            print(f"Inventory loaded successfully from {filepath}. Next ID is {self._next_id}.")
+            print(f"Inventory loaded successfully from {filepath}. Next ID will be {self._next_id}.")
 
         except (IOError, json.JSONDecodeError) as e:
             print(f"Error loading inventory from {filepath}: {e}")
@@ -171,17 +172,14 @@ def run_cli():
                     print(manager.view_inventory())
                 
                 elif command == "remove":
-                    item_id = input("Enter ID of item to remove: ").strip()
-                    print(manager.remove_item(item_id))
+                    try:
+                        item_id = int(input("Enter ID of item to remove: ").strip())
+                        print(manager.remove_item(item_id))
+                    except ValueError:
+                        print("Error: ID must be a number")
 
                 elif command == "add":
                     try:
-                        item_id = input("Enter ID: ").strip()
-                        if manager.check_item(item_id):
-                            print(f"Error: Item ID '{item_id}' already exists. Please choose a different ID.")
-                            continue
-
-                        
                         name = input("Enter Name: ").strip()
                         quantity = int(input("Enter Quantity: "))
                         price = float(input("Enter Price: "))
@@ -190,7 +188,7 @@ def run_cli():
                             print("ERROR: Quantity and Price cannot be negative")
                             continue
 
-                        print(manager.add_item(item_id, name, quantity, price))
+                        print(manager.add_item(0, name, quantity, price))  # 0 is a placeholder since ID is auto-generated
                     except ValueError:
                         print("Error: Quantity must be a whole number and Price must be a decimal number.")
                     except Exception as e:
