@@ -1,1 +1,9 @@
+# Virtual environment 
+venv/
+
+# Compiled Python files
+__pycache__/
+
+# Specific inventory database and data files
+inventory.db
 inventory_data.json

@@ -100,7 +100,7 @@ def add_item_api():
             "status": "success",
             "message": f"Item '{name}' added successfully.",
             "item": new_item.to_dict()
-        }), 201 # HTTP 201 Created
+        }), 201 
     
     except ValueError:
         return jsonify({"status": "error", "message": "Invalid quantity or price format."}), 400
@@ -175,11 +175,32 @@ def delete_item_api(item_id):
         print(f"Error deleting item: {e}")
         return jsonify({{"status": "error", "message": f"Failed to delete item: {e}"}}), 500
     
+@app.route('/api/item/<int:item_id>', methods=['GET'])
+def get_item_api(item_id):
+    # Endpoint to retrieve an inventory item by ID
+    try:
+        data =  inventory_manager.get_item(item_id)
+
+        if not data:
+            return jsonify({"status": "error",
+                            "message":"Item not found"}), 404
+        
+        return jsonify({
+            "status":"success",
+            "inventory item": data
+        }), 200
+
+
+    except Exception as e:
+        return jsonify({"status":"error", "message":f"Failed to retrieve item: {e}"}), 404
+
+
+
 
 # --- Run the APP ---
 if __name__ == '__main__':
-    print("\n--------------------------------------------")
+    print("\n----------------------------------------------------------------")
     print("         Inventory API Server (SQLite) is starting...")
     print("       Acces the API endpoints using HTTP request at port 5000")
-    print("----------------------------------------------")
+    print("------------------------------------------------------------------")
     app.run(debug=True, host='0.0.0.0', port=5000)

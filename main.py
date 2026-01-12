@@ -23,107 +23,105 @@ class InventoryItem:
             "price": self.price
         }
 
-class InventoryManager:
-    """Manages the collection of inventory items using SQLite for persistence."""
-    def __init__(self, db_name: str = 'inventory.db'):
-        # The database file name
+class DatabaseSession:
+    def __init__(self, db_name):
         self.db_name = db_name
-        self.conn = None
-        self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
-        """Establishes or returns the database connection"""
-        if self.conn is None:
-            self.conn = sqlite3.connect(self.db_name)
-            # This line makes results come back as dictionaries (squlite3.Row objects) instead of tuples.
-            self.conn.row_factory = sqlite3.Row
+    def __enter__(self):
+        self.conn = sqlite3.connect(self.db_name)
+        self.conn.row_factory = sqlite3.Row
+        self.conn.execute("PRAGMA journal_mode=WAL;")
         return self.conn
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if exc_type:
+            self.conn.rollback()
+        else:
+            self.conn.commit()
+        self.conn.close()
+
+
+class InventoryManager:
+    def __init__(self, db_name: str = 'inventory.db'):
+        self.db_name = db_name
+        self._init_db()
     
     def _init_db(self):
         """Creates the inventory table if it does not exist."""
-        try:
-            conn = self._get_connection()
+        with DatabaseSession(self.db_name) as conn:
             cursor = conn.cursor()
-            # CRUCIAL SQL: Defining the schema.
-            # INTEGER PRIMARY KEY automatically handles auto-incrementing ID.
             cursor.execute('''
                 CREATE TABLE IF NOT EXISTS inventory (
                     item_id INTEGER PRIMARY KEY,
                     name TEXT NOT NULL,
                     quantity INTEGER NOT NULL,
                     price REAL NOT NULL
-                )
+                    )
             ''')
-            conn.commit()
-            print(f"SQLite database initialized: {self.db_name}")
-        except sqlite3.Error as e:
-            print(f"Database Initialization Error: {e}")
-
-    # --- CRUD Operations ---
+            print(f"Sqlite database initialized: {self.db_name}")
 
     # C - CREATE (Add Item)
     def add_item(self, name: str, quantity: int, price: float) -> InventoryItem:
         """Adds a new item to the database using an INSERT SQL Query."""
-        conn = self._get_connection()
-        cursor = conn.cursor()
+        with DatabaseSession(self.db_name) as conn:
+            cursor = conn.cursor()
 
-        # INSERT Statement: Always use '?' placeholders to prevent SQL Injection attacks.
-        cursor.execute(
+            # INSERT Statement: Always use '?' placeholders to prevent SQL Injection attacks.
+            cursor.execute(
             "INSERT INTO inventory (name, quantity, price) VALUES (?, ?, ?)",
             (name, quantity, price)
-        )
-        # Retrieve the ID that SQLite just generated
-        new_id = cursor.lastrowid
-        conn.commit()
+            )
+            # Retrieve the ID that SQLite just generated
+            new_id = cursor.lastrowid
 
-        print(f"Added item '{name}' with ID {new_id} to SQLite.")
-        return InventoryItem(name, quantity, price, item_id=new_id)
+            print(f"Added item '{name}' with ID {new_id} to SQLite.")
+            return InventoryItem(name, quantity, price, item_id=new_id)
     
     # R - READ (Get All Items)
     def get_all_items_data(self) -> List[Dict]:
-        """Retrieves all items using a SELECT SQL query."""
-        conn = self._get_connection()
-        cursor = conn.cursor()
+        with DatabaseSession(self.db_name) as conn:
+            
+            cursor = conn.cursor()
 
-        cursor.execute("SELECT item_id, name, quantity, price FROM inventory")
-        results = cursor.fetchall()
+            cursor.execute("SELECT item_id, name, quantity, price FROM inventory")
+            results = cursor.fetchall()
 
-        #Convert the results into a standard list of dictionaries
-        inventory_list = [Dict(row) for row in results]
-        return inventory_list
+            #Convert the results into a standard list of dictionaries
+            inventory_list = [dict(row) for row in results]
+            return inventory_list
     
     # U - UPDATE (Update Item)
     def update_item(self, item_id: int, name: Optional[str] = None, quantity: Optional[int] = None, price: Optional[float] = None) -> bool:
         """Updates item fields using an UPDATE SQL query"""
-        conn = self.get_connection()
-        cursor = conn.cursor()
+        with DatabaseSession(self.db_name) as conn:
+            cursor = conn.cursor()
 
-        updates = []
-        params = []
+            updates = []
+            params = []
 
-        if name is not None:
-            updates.append("name = ?")
-            params.append(name)
-        if quantity is not None:
-            updates.append("quantity = ?")
-            params.append(quantity)
-        if price is not None:
-            updates.append("price = ?")
-            params.append(price)
+            if name is not None:
+                updates.append("name = ?")
+                params.append(name)
+            if quantity is not None:
+                updates.append("quantity = ?")
+                params.append(quantity)
+            if price is not None:
+                updates.append("price = ?")
+                params.append(price)
 
-        if not updates:
-            return False # Nothing to update
-        
-        # Build the full SQL command dynamically
-        set_clause = ", ".join(updates)
-        sql_command = f"UPDATE inventory SET {set_clause} WHERE item_id = ?"
-        params.append(item_id)
+            if not updates:
+                return False # Nothing to update
+            
+            # Build the full SQL command dynamically
+            set_clause = ", ".join(updates)
+            sql_command = f"UPDATE inventory SET {set_clause} WHERE item_id = ?"
+            params.append(item_id)
 
-        cursor.execute(sql_command, tuple(params))
-        conn.commit()
+            cursor.execute(sql_command, tuple(params))
+            conn.commit()
 
-        # Check if exactly one row was updated
-        return cursor.rowcount > 0
+            # Check if exactly one row was updated
+            return cursor.rowcount > 0
     
 
     # D - DELETE (Remove Item)
@@ -133,13 +131,26 @@ class InventoryManager:
         cursor = conn.cursor()
 
         # DELETE Statement
-        cursor.execute("DELETE FROM inventory WHERE item_id = ?", {item_id})
+        cursor.execute("DELETE FROM inventory WHERE item_id = ?", (item_id,))
         conn.commit()
 
         # Check if the deletion was successful
         return cursor.rowcount > 0
     
-# NOTE: The database connection is kept open until the server explicitly terminates.
+
+    def get_item(self, item_id):
+        with DatabaseSession(self.db_name) as conn:
+            cursor = conn.cursor()
+            cursor.execute('SELECT * FROM inventory WHERE item_id = ?',(item_id,))
+            row = cursor.fetchone()
+            
+            if row:
+                return dict(row)            
+            return None
+
+
+    
+# NOTE: The database connection is done through the context manager created in the DatabaseSession class, which ensures safely closing it.
 
 
 
