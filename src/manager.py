@@ -1,45 +1,12 @@
+"""
+Inventory Manager handler
+"""
+
 import sqlite3
 from typing import Dict, List, Any, Optional
 
-
-# InventoryItem Class
-# The Item class is now simplified, letting the database handle the ID generation
-class InventoryItem:
-    """
-    Blueprint for a single item (the data structure)
-    """
-    def __init__(self, name: str, quantity: int, price: float, item_id: Optional[int] = None, ):
-        self.item_id = item_id
-        self.name = name
-        self.quantity = quantity
-        self.price = price
-
-    def to_dict(self) -> Dict:
-        # Converts the object into a dictionary for API Response
-        return {
-            "item_id": self.item_id,
-            "name": self.name,
-            "quantity": self.quantity,
-            "price": self.price
-        }
-
-class DatabaseSession:
-    def __init__(self, db_name):
-        self.db_name = db_name
-
-    def __enter__(self):
-        self.conn = sqlite3.connect(self.db_name)
-        self.conn.row_factory = sqlite3.Row
-        self.conn.execute("PRAGMA journal_mode=WAL;")
-        return self.conn
-    
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type:
-            self.conn.rollback()
-        else:
-            self.conn.commit()
-        self.conn.close()
-
+from src.models import InventoryItem
+from src.database import DatabaseSession
 
 class InventoryManager:
     def __init__(self, db_name: str = 'inventory.db'):
@@ -116,9 +83,8 @@ class InventoryManager:
             set_clause = ", ".join(updates)
             sql_command = f"UPDATE inventory SET {set_clause} WHERE item_id = ?"
             params.append(item_id)
-
             cursor.execute(sql_command, tuple(params))
-            conn.commit()
+            
 
             # Check if exactly one row was updated
             return cursor.rowcount > 0
@@ -127,15 +93,14 @@ class InventoryManager:
     # D - DELETE (Remove Item)
     def delete_item(self, item_id: int) -> bool:
         """Deletes an item by ID using a DELETE SQL query."""
-        conn = self._get_connection()
-        cursor = conn.cursor()
+        with DatabaseSession(self.db_name) as conn:
+            cursor = conn.cursor()
 
-        # DELETE Statement
-        cursor.execute("DELETE FROM inventory WHERE item_id = ?", (item_id,))
-        conn.commit()
-
-        # Check if the deletion was successful
-        return cursor.rowcount > 0
+            # DELETE Statement
+            cursor.execute("DELETE FROM inventory WHERE item_id = ?", (item_id,))
+            
+            # Check if the deletion was successful
+            return cursor.rowcount > 0
     
 
     def get_item(self, item_id):
@@ -151,6 +116,3 @@ class InventoryManager:
 
     
 # NOTE: The database connection is done through the context manager created in the DatabaseSession class, which ensures safely closing it.
-
-
-

@@ -7,3 +7,10 @@ __pycache__/
 # Specific inventory database and data files
 inventory.db
 inventory_data.json
+
+# Pytest
+.pytest_cache/
+
+# macOS system files
+.DS_Store
+**/.DS_Store

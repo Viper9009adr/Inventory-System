@@ -4,49 +4,9 @@ from flask import Flask, jsonify, request
 from typing import Dict, Any, Optional
 
 # Importing the InventoryManager from the core file
-from main import InventoryManager
+from src.manager import InventoryManager
+from src.models import InventoryItem, ValidationError
 
-# --- ML Model Placeholder --- 
-
-# Placeholder class for the ML model inference for future versions of it
-# Must Import threading, time and random to function
-"""class MLPredictor:
-    #Simulates loading and running a trained TensorFlow model
-    def __init__(self, model_path: str = "trained_model.h5"):
-        # In a real environment, this would initialize the TensorFlow model
-        self.model_path = model_path
-        self.is_loaded = False
-        self.device = self._get_optimal_device()
-        self._loaded_model_sync() # Load a server start
-
-    def _get_optimal_device(self) -> str:
-        '''Checks for GPU availability for inference acceleration'''
-        # SIMULATION:
-        if random.random() < 0.5: # 50% chance to simulate a GPU being found
-            return "GPU (RTX 3080)"
-        return "CPU"
-    
-    def _load_model_sync(self):
-        '''Simulates the blocking process of loading the trainel model file'''
-        print(f"[{threading.current_thread().name}] Starting ML model loading...")
-        #Simulates loading a large archive file (the trained model)
-        time.sleep(random.uniform(0.5, 1.5))
-        self.is_loaded = True
-        print(f"[{threading.current_thread().name}] ML Model loaded successfully! Running on {self.device}")
-
-    def predict_demand(self, item_id: int, hostorical_data: Dict[str, Any]) -> float:
-        #Simulates running a prediction for future demand
-        if not self.is_loaded:
-            raise RuntimeError("Model is not loaded. Cannot run prediction")
-        
-        print(f"Running inference for item {item_id} on {self.device}...")
-
-        #Simulate a prediction based on item_id (predictable but random)
-        base_prediction = (item_id * 7 + random.randint(10, 50)) / 10
-        #Simulate a complex, floating-point prediction
-        return round(base_prediction * random.uniform(0.9, 1.1), 2)
-    
-        """
 # --- Flask App Initialization ---
 app = Flask(__name__)
 
@@ -87,11 +47,26 @@ def add_item_api():
         
         # Extract and validate fields
         name = data.get("name")
-        quantity = int(data.get('quantity', 0))
-        price = float(data.get('price', 0.0))
+        quantity = data.get('quantity')
+        price = data.get('price')
 
         if not name:
             return jsonify({"status": "error", "message": "Item name is required"}), 400
+        
+        if not quantity:
+            return jsonify({"status": "error", "message": "Quantity is required"}), 400
+        
+        if not price:
+            return jsonify({"status": "error", "message": "Price is required"}), 400
+        
+        try:
+            InventoryItem._validate_name(name)
+            InventoryItem._validate_quantity(quantity)
+            InventoryItem._validate_price(price)
+
+        except ValidationError as e:
+            print(f"Error validation {e}")
+            return jsonify({"status": "error", "message": "validation failed"})
         
         # Call the core logic layer
         new_item = inventory_manager.add_item(name, quantity, price)
@@ -99,7 +74,7 @@ def add_item_api():
         return jsonify({
             "status": "success",
             "message": f"Item '{name}' added successfully.",
-            "item": new_item.to_dict()
+            #"item": new_item.to_dict()
         }), 201 
     
     except ValueError:
@@ -195,12 +170,3 @@ def get_item_api(item_id):
         return jsonify({"status":"error", "message":f"Failed to retrieve item: {e}"}), 404
 
 
-
-
-# --- Run the APP ---
-if __name__ == '__main__':
-    print("\n----------------------------------------------------------------")
-    print("         Inventory API Server (SQLite) is starting...")
-    print("       Acces the API endpoints using HTTP request at port 5000")
-    print("------------------------------------------------------------------")
-    app.run(debug=True, host='0.0.0.0', port=5000)
