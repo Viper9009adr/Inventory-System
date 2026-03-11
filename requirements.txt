@@ -1,0 +1,6 @@
+Flask
+Werkzeug
+pytest
+PyJWT
+Flask-Limiter
+python-dotenv

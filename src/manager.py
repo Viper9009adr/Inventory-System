@@ -1,52 +1,38 @@
 """
 Inventory Manager handler
 """
-
-import sqlite3
 from typing import Dict, List, Any, Optional
 
 from src.models import InventoryItem
 from src.database import DatabaseSession
+from src.config import DB_NAME
 
 class InventoryManager:
-    def __init__(self, db_name: str = 'inventory.db'):
-        self.db_name = db_name
-        self._init_db()
-    
-    def _init_db(self):
-        """Creates the inventory table if it does not exist."""
-        with DatabaseSession(self.db_name) as conn:
-            cursor = conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS inventory (
-                    item_id INTEGER PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    price REAL NOT NULL
-                    )
-            ''')
-            print(f"Sqlite database initialized: {self.db_name}")
 
     # C - CREATE (Add Item)
-    def add_item(self, name: str, quantity: int, price: float) -> InventoryItem:
+    @classmethod
+    def add_item(cls, name: str, quantity: int, price: float) -> InventoryItem:
         """Adds a new item to the database using an INSERT SQL Query."""
-        with DatabaseSession(self.db_name) as conn:
+        with DatabaseSession(DB_NAME) as conn:
             cursor = conn.cursor()
 
             # INSERT Statement: Always use '?' placeholders to prevent SQL Injection attacks.
             cursor.execute(
-            "INSERT INTO inventory (name, quantity, price) VALUES (?, ?, ?)",
+            "INSERT INTO inventory (name, quantity, price) VALUES (?, ?, ?) RETURNING created_at",
             (name, quantity, price)
             )
             # Retrieve the ID that SQLite just generated
             new_id = cursor.lastrowid
+            # Uses database to retrieve timestamp
+            timestamp = cursor.fetchone()['created_at']
 
             print(f"Added item '{name}' with ID {new_id} to SQLite.")
-            return InventoryItem(name, quantity, price, item_id=new_id)
+            return InventoryItem(name, quantity, price, item_id=new_id, created_at=timestamp)
     
     # R - READ (Get All Items)
-    def get_all_items_data(self) -> List[Dict]:
-        with DatabaseSession(self.db_name) as conn:
+    @classmethod
+    def get_all_items_data(cls) -> List[Dict]:
+        with DatabaseSession(DB_NAME) as conn:
             
             cursor = conn.cursor()
 
@@ -58,9 +44,10 @@ class InventoryManager:
             return inventory_list
     
     # U - UPDATE (Update Item)
-    def update_item(self, item_id: int, name: Optional[str] = None, quantity: Optional[int] = None, price: Optional[float] = None) -> bool:
+    @classmethod
+    def update_item(cls, item_id: int, name: Optional[str] = None, quantity: Optional[int] = None, price: Optional[float] = None) -> bool:
         """Updates item fields using an UPDATE SQL query"""
-        with DatabaseSession(self.db_name) as conn:
+        with DatabaseSession(DB_NAME) as conn:
             cursor = conn.cursor()
 
             updates = []
@@ -91,9 +78,10 @@ class InventoryManager:
     
 
     # D - DELETE (Remove Item)
-    def delete_item(self, item_id: int) -> bool:
+    @classmethod
+    def delete_item(cls, item_id: int) -> bool:
         """Deletes an item by ID using a DELETE SQL query."""
-        with DatabaseSession(self.db_name) as conn:
+        with DatabaseSession(DB_NAME) as conn:
             cursor = conn.cursor()
 
             # DELETE Statement
@@ -102,9 +90,9 @@ class InventoryManager:
             # Check if the deletion was successful
             return cursor.rowcount > 0
     
-
-    def get_item(self, item_id):
-        with DatabaseSession(self.db_name) as conn:
+    @classmethod
+    def get_item(cls, item_id):
+        with DatabaseSession(DB_NAME) as conn:
             cursor = conn.cursor()
             cursor.execute('SELECT * FROM inventory WHERE item_id = ?',(item_id,))
             row = cursor.fetchone()

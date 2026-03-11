@@ -14,3 +14,19 @@ inventory_data.json
 # macOS system files
 .DS_Store
 **/.DS_Store
+
+# OpenCode Agent Files
+AGENT.md
+.opencode/
+opencode.json
+opencode-sqlite.db*
+
+# Ollama / Local Model Artifacts
+*.bin
+*.gguf
+
+# Environment & Security
+.config/opencode/
+.env
+*.env
+.env.*

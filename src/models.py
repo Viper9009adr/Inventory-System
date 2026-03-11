@@ -1,14 +1,12 @@
 """
 Data models for the inventory system
 
-Models define the structure of your data and validation rules.
-They don't know anything about databases or APIs - just data structure.
+Models define the structure of data and validation rules.
 
-This is the 'M' in MVC (Model-View-Controller) pattern.
 """
 
 from typing import Dict, Optional
-from datetime import datetime
+import math
 
 # --- Custom exception ---
 
@@ -40,23 +38,17 @@ class InventoryItem:
     2. Validates data (name not empty, quantity >= 0, etc.)
     3. Provides conversion methods (to_dict for JSON responses)
 
-    It does NOT:
-    - Know how to save itself to a database (that's Respository's job)
-    - Know about HTTP requests (that's API's job)
-    - Know about business rules (that's Service's job)
-
-    This is called " Separation of Concerns" - each class has ONE job
     """
 
     # Class-level constant for validation
-    MAX_NAME_LENGHT = 255
+    MAX_NAME_LENGTH = 255
     MIN_QUANTITY = 0
     MAX_QUANTITY = 1_000_000
     MIN_PRICE = 0.0
     MAX_PRICE = 1_000_000.0
 
-    def __init__(
-            self, name: str, 
+    def __init__(self, 
+            name: str, 
             quantity: int, 
             price: float, 
             item_id: Optional[int] = None,
@@ -70,7 +62,7 @@ class InventoryItem:
             name: Item name (required, 1-255 chars)
             quantity:  How many in stock (>= 0)
             price:  Price per unit (>= 0.0)
-            item_id: Database ID (set by database, None for new items)
+            item_id: Database ID 
             created_at: Timestamps when created
             updated_at: Timestamps when last updated
 
@@ -126,9 +118,9 @@ class InventoryItem:
                 f"Name cannot be empty"
             )
         
-        if len(name) > InventoryItem.MAX_NAME_LENGHT:
+        if len(name) > InventoryItem.MAX_NAME_LENGTH:
             raise ValidationError(
-                f"Name too long (max {InventoryItem.MAX_NAME_LENGHT} chars)"
+                f"Name too long (max {InventoryItem.MAX_NAME_LENGTH} chars)"
             )
         
         return name
@@ -188,6 +180,9 @@ class InventoryItem:
             raise ValidationError(
                 f"Price must be a number, got {type(price).__name__}"
             )
+
+        if isinstance(price, float) and not math.isfinite(price):
+            raise ValidationError("Price must be a finite number")
         
         if price < InventoryItem.MIN_PRICE:
             raise ValidationError(
@@ -199,7 +194,7 @@ class InventoryItem:
                 f"Price too long (max {InventoryItem.MAX_PRICE})"
             )
         
-        return price
+        return float(price)
 
 def __repr__(self) -> str:
     """String representation for debugging"""

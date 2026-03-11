@@ -1,4 +1,4 @@
-
+from dotenv import load_dotenv
 from src.api import app
 
 # --- Run the APP ---

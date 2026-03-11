@@ -16,10 +16,3 @@ from src.manager import InventoryManager
 from src.database import DatabaseSession
 from src.api import app
 
-
-__all__ = [
-    'InventoryItem',
-    'InventoryManager',
-    'DatabaseSession',
-    'app'
-]
